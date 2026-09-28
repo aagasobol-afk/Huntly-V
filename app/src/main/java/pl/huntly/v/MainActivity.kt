@@ -91,15 +91,80 @@ class MainActivity : AppCompatActivity() {
             root.addView(openButton, LinearLayout.LayoutParams(-1, -2))
         }
 
-        val count = savedInspirations().size
+        val inspirations = savedInspirations()
+        val count = inspirations.size
+
         val history = TextView(this).apply {
-            text = "Twoje inspiracje: $count"
+            text = "Twoje inspiracje: " + count
             textSize = 16f
             setTextColor(Color.rgb(23, 58, 45))
             setPadding(0, 32, 0, 8)
         }
 
         root.addView(history, LinearLayout.LayoutParams(-1, -2))
+
+        if (inspirations.isNotEmpty()) {
+            val listTitle = TextView(this).apply {
+                text = "Zapisane oferty"
+                textSize = 18f
+                setTextColor(Color.rgb(23, 58, 45))
+                setPadding(0, 20, 0, 12)
+            }
+            root.addView(listTitle, LinearLayout.LayoutParams(-1, -2))
+
+            inspirations.forEachIndexed { index, url ->
+                val card = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setBackgroundColor(Color.WHITE)
+                    setPadding(24, 20, 24, 20)
+                }
+
+                val number = TextView(this).apply {
+                    text = "Inspiracja " + (index + 1)
+                    textSize = 14f
+                    setTextColor(Color.rgb(23, 58, 45))
+                }
+
+                val itemLink = TextView(this).apply {
+                    text = url
+                    textSize = 14f
+                    setTextColor(Color.rgb(23, 58, 45))
+                    setPadding(0, 8, 0, 12)
+                }
+
+                val actions = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+
+                val open = Button(this).apply {
+                    text = "Otwórz"
+                    setOnClickListener {
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    }
+                }
+
+                val delete = Button(this).apply {
+                    text = "Usuń"
+                    setOnClickListener {
+                        deleteInspiration(url)
+                        showSharedContent(Intent())
+                    }
+                }
+
+                actions.addView(open, LinearLayout.LayoutParams(0, -2, 1f))
+                actions.addView(delete, LinearLayout.LayoutParams(0, -2, 1f))
+
+                card.addView(number, LinearLayout.LayoutParams(-1, -2))
+                card.addView(itemLink, LinearLayout.LayoutParams(-1, -2))
+                card.addView(actions, LinearLayout.LayoutParams(-1, -2))
+
+                val cardParams = LinearLayout.LayoutParams(-1, -2)
+                cardParams.setMargins(0, 0, 0, 16)
+                root.addView(card, cardParams)
+            }
+        }
+
         setContentView(root)
     }
 
@@ -109,15 +174,34 @@ class MainActivity : AppCompatActivity() {
         current.add(0, url)
 
         val limited = current.take(20)
+
         prefs.edit()
+            .putString("inspirations_ordered", limited.joinToString("\n"))
             .putStringSet("inspirations", limited.toSet())
             .putString("latest", url)
             .apply()
     }
 
+    private fun deleteInspiration(url: String) {
+        val remaining = savedInspirations().filter { it != url }.take(20)
+
+        prefs.edit()
+            .putString("inspirations_ordered", remaining.joinToString("\n"))
+            .putStringSet("inspirations", remaining.toSet())
+            .putString("latest", remaining.firstOrNull())
+            .apply()
+    }
+
     private fun savedInspirations(): List<String> {
+        val ordered = prefs.getString("inspirations_ordered", null)
+
+        if (!ordered.isNullOrBlank()) {
+            return ordered.lines().filter { it.isNotBlank() }
+        }
+
         val latest = prefs.getString("latest", null)
         val set = prefs.getStringSet("inspirations", emptySet()) ?: emptySet()
+
         return buildList {
             if (latest != null) add(latest)
             addAll(set.filter { it != latest })
