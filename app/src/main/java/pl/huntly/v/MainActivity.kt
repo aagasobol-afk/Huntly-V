@@ -2,15 +2,22 @@ package pl.huntly.v
 
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
+
+    private val darkGreen = Color.rgb(23, 58, 45)
+    private val cream = Color.rgb(247, 243, 234)
+    private val gold = Color.rgb(181, 139, 58)
 
     private val prefs by lazy {
         getSharedPreferences("huntly_v", MODE_PRIVATE)
@@ -38,134 +45,220 @@ class MainActivity : AppCompatActivity() {
             saveInspiration(sharedText)
         }
 
+        val scroll = ScrollView(this).apply {
+            setBackgroundColor(cream)
+            isFillViewport = true
+        }
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(48, 80, 48, 48)
-            setBackgroundColor(Color.rgb(247, 243, 234))
+            setPadding(32, 56, 32, 40)
         }
 
         val title = TextView(this).apply {
             text = "Huntly V"
-            textSize = 30f
-            setTextColor(Color.rgb(23, 58, 45))
+            textSize = 32f
+            typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+            setTextColor(darkGreen)
             gravity = Gravity.CENTER
         }
 
         val subtitle = TextView(this).apply {
             text = "Ty pokazujesz. Huntly szuka."
-            textSize = 16f
-            setTextColor(Color.rgb(23, 58, 45))
-            gravity = Gravity.CENTER
-            setPadding(0, 20, 0, 28)
-        }
-
-        val link = TextView(this).apply {
-            text = sharedText ?: "Udostępnij ofertę z Vinted do Huntly V."
             textSize = 17f
-            setTextColor(Color.rgb(23, 58, 45))
-            setBackgroundColor(Color.WHITE)
-            setPadding(28, 28, 28, 28)
+            setTextColor(darkGreen)
+            gravity = Gravity.CENTER
+            setPadding(0, 10, 0, 32)
         }
 
         root.addView(title, LinearLayout.LayoutParams(-1, -2))
         root.addView(subtitle, LinearLayout.LayoutParams(-1, -2))
-        root.addView(link, LinearLayout.LayoutParams(-1, -2))
 
         if (!sharedText.isNullOrBlank()) {
             val saved = TextView(this).apply {
-                text = "✓ Oferta zapisana w Twoich inspiracjach"
-                textSize = 15f
-                setTextColor(Color.rgb(23, 58, 45))
-                setPadding(0, 24, 0, 12)
+                text = "✓  Inspiracja zapisana"
+                textSize = 16f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(darkGreen)
+                setPadding(4, 8, 4, 14)
             }
 
-            val openButton = Button(this).apply {
-                text = "Otwórz ofertę na Vinted"
-                setOnClickListener {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(sharedText)))
-                }
-            }
-
+            val latestCard = makeLatestCard(sharedText)
             root.addView(saved, LinearLayout.LayoutParams(-1, -2))
-            root.addView(openButton, LinearLayout.LayoutParams(-1, -2))
+            root.addView(latestCard, marginParams(bottom = 22))
+        } else if (savedInspirations().isEmpty()) {
+            val empty = TextView(this).apply {
+                text = "Udostępnij ofertę z Vinted do Huntly V.\n\nZ czasem zbierzemy tutaj rzeczy, które Ci się podobają."
+                textSize = 17f
+                setTextColor(darkGreen)
+                setBackgroundColor(Color.WHITE)
+                setPadding(24, 24, 24, 24)
+            }
+            root.addView(empty, marginParams(bottom = 22))
         }
 
         val inspirations = savedInspirations()
-        val count = inspirations.size
 
-        val history = TextView(this).apply {
-            text = "Twoje inspiracje: " + count
-            textSize = 16f
-            setTextColor(Color.rgb(23, 58, 45))
-            setPadding(0, 32, 0, 8)
+        val section = TextView(this).apply {
+            text = "Twoje inspiracje  •  " + inspirations.size
+            textSize = 21f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(darkGreen)
+            setPadding(4, 8, 4, 16)
+        }
+        root.addView(section, LinearLayout.LayoutParams(-1, -2))
+
+        inspirations.forEachIndexed { index, url ->
+            root.addView(makeInspirationCard(index, url), marginParams(bottom = 14))
         }
 
-        root.addView(history, LinearLayout.LayoutParams(-1, -2))
+        scroll.addView(root)
+        setContentView(scroll)
+    }
 
-        if (inspirations.isNotEmpty()) {
-            val listTitle = TextView(this).apply {
-                text = "Zapisane oferty"
-                textSize = 18f
-                setTextColor(Color.rgb(23, 58, 45))
-                setPadding(0, 20, 0, 12)
-            }
-            root.addView(listTitle, LinearLayout.LayoutParams(-1, -2))
+    private fun makeLatestCard(url: String): View {
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.WHITE)
+            setPadding(24, 22, 24, 22)
+        }
 
-            inspirations.forEachIndexed { index, url ->
-                val card = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setBackgroundColor(Color.WHITE)
-                    setPadding(24, 20, 24, 20)
-                }
+        val label = TextView(this).apply {
+            text = "NOWA INSPIRACJA"
+            textSize = 12f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(gold)
+        }
 
-                val number = TextView(this).apply {
-                    text = "Inspiracja " + (index + 1)
-                    textSize = 14f
-                    setTextColor(Color.rgb(23, 58, 45))
-                }
+        val name = TextView(this).apply {
+            text = prettyTitle(url)
+            textSize = 20f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(darkGreen)
+            setPadding(0, 8, 0, 6)
+        }
 
-                val itemLink = TextView(this).apply {
-                    text = url
-                    textSize = 14f
-                    setTextColor(Color.rgb(23, 58, 45))
-                    setPadding(0, 8, 0, 12)
-                }
+        val small = TextView(this).apply {
+            text = "Vinted  •  " + shortUrl(url)
+            textSize = 13f
+            setTextColor(Color.DKGRAY)
+        }
 
-                val actions = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                }
-
-                val open = Button(this).apply {
-                    text = "Otwórz"
-                    setOnClickListener {
-                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                    }
-                }
-
-                val delete = Button(this).apply {
-                    text = "Usuń"
-                    setOnClickListener {
-                        deleteInspiration(url)
-                        showSharedContent(Intent())
-                    }
-                }
-
-                actions.addView(open, LinearLayout.LayoutParams(0, -2, 1f))
-                actions.addView(delete, LinearLayout.LayoutParams(0, -2, 1f))
-
-                card.addView(number, LinearLayout.LayoutParams(-1, -2))
-                card.addView(itemLink, LinearLayout.LayoutParams(-1, -2))
-                card.addView(actions, LinearLayout.LayoutParams(-1, -2))
-
-                val cardParams = LinearLayout.LayoutParams(-1, -2)
-                cardParams.setMargins(0, 0, 0, 16)
-                root.addView(card, cardParams)
+        val open = Button(this).apply {
+            text = "OTWÓRZ OFERTĘ"
+            setOnClickListener {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
             }
         }
 
-        setContentView(root)
+        card.addView(label)
+        card.addView(name)
+        card.addView(small)
+        card.addView(open, marginParams(top = 14))
+
+        return card
+    }
+
+    private fun makeInspirationCard(index: Int, url: String): View {
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.WHITE)
+            setPadding(22, 20, 22, 20)
+        }
+
+        val top = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        val number = TextView(this).apply {
+            text = String.format("%02d", index + 1)
+            textSize = 13f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(gold)
+        }
+
+        val name = TextView(this).apply {
+            text = prettyTitle(url)
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(darkGreen)
+            setPadding(12, 0, 0, 0)
+        }
+
+        top.addView(number, LinearLayout.LayoutParams(34, -2))
+        top.addView(name, LinearLayout.LayoutParams(0, -2, 1f))
+
+        val source = TextView(this).apply {
+            text = "Vinted  •  " + shortUrl(url)
+            textSize = 12f
+            setTextColor(Color.GRAY)
+            setPadding(0, 8, 0, 12)
+        }
+
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        val open = Button(this).apply {
+            text = "OTWÓRZ"
+            setOnClickListener {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            }
+        }
+
+        val delete = Button(this).apply {
+            text = "USUŃ"
+            setOnClickListener {
+                deleteInspiration(url)
+                showSharedContent(Intent())
+            }
+        }
+
+        actions.addView(open, LinearLayout.LayoutParams(0, -2, 1f))
+        actions.addView(delete, LinearLayout.LayoutParams(0, -2, 1f))
+
+        card.addView(top)
+        card.addView(source)
+        card.addView(actions)
+
+        return card
+    }
+
+    private fun prettyTitle(url: String): String {
+        val slug = url.substringAfterLast("/").substringBefore("?")
+        if (slug.isBlank()) return "Zapisana rzecz"
+
+        val words = slug
+            .replace(Regex("^\\d+-"), "")
+            .replace("-", " ")
+            .replace("_", " ")
+            .trim()
+
+        if (words.isBlank()) return "Zapisana rzecz"
+
+        return words
+            .split(" ")
+            .joinToString(" ") { word ->
+                if (word.length <= 2) word.uppercase()
+                else word.replaceFirstChar { it.uppercase() }
+            }
+            .take(70)
+    }
+
+    private fun shortUrl(url: String): String {
+        val slug = url.substringAfterLast("/").substringBefore("?")
+        return if (slug.length > 42) slug.take(42) + "…" else slug
+    }
+
+    private fun marginParams(
+        top: Int = 0,
+        bottom: Int = 0
+    ): LinearLayout.LayoutParams {
+        return LinearLayout.LayoutParams(-1, -2).apply {
+            setMargins(0, top, 0, bottom)
+        }
     }
 
     private fun saveInspiration(url: String) {
