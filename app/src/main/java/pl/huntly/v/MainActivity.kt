@@ -26,6 +26,8 @@ class MainActivity : AppCompatActivity() {
     private val muted = Color.rgb(108, 108, 98)
     private val line = Color.rgb(225, 219, 207)
 
+    private lateinit var searchInput: EditText
+
     private val prefs by lazy {
         getSharedPreferences("huntly_v", MODE_PRIVATE)
     }
@@ -148,7 +150,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun searchBox(): View {
-        return EditText(this).apply {
+        searchInput = EditText(this).apply {
             hint = "Czego szukasz?"
             textSize = 16f
             setTextColor(darkGreen)
@@ -156,7 +158,9 @@ class MainActivity : AppCompatActivity() {
             setSingleLine(true)
             setPadding(dp(18), 0, dp(18), 0)
             background = rounded(warmWhite, 18f, line)
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
         }
+        return searchInput
     }
 
     private fun showItemButton(): View {
@@ -168,13 +172,32 @@ class MainActivity : AppCompatActivity() {
             isAllCaps = false
             background = rounded(darkGreen, 18f)
             setOnClickListener {
-                Toast.makeText(
-                    this@MainActivity,
-                    "Na Vinted: Udostępnij → Huntly V",
-                    Toast.LENGTH_LONG
-                ).show()
+                searchVinted()
             }
         }
+    }
+
+    private fun searchVinted() {
+        val query = searchInput.text?.toString()?.trim().orEmpty()
+
+        if (query.isBlank()) {
+            Toast.makeText(
+                this,
+                "Najpierw wpisz, czego szukasz.",
+                Toast.LENGTH_SHORT
+            ).show()
+            searchInput.requestFocus()
+            return
+        }
+
+        val searchUri = Uri.Builder()
+            .scheme("https")
+            .authority("www.vinted.pl")
+            .path("catalog")
+            .appendQueryParameter("search_text", query)
+            .build()
+
+        startActivity(Intent(Intent.ACTION_VIEW, searchUri))
     }
 
     private fun statusPill(text: String): View {
