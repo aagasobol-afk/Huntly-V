@@ -153,7 +153,7 @@ class MainActivity : AppCompatActivity() {
             textSize = 16f
             setTextColor(darkGreen)
             setHintTextColor(Color.rgb(150, 146, 137))
-            singleLine = true
+            setSingleLine(true)
             setPadding(dp(18), 0, dp(18), 0)
             background = rounded(warmWhite, 18f, line)
         }
