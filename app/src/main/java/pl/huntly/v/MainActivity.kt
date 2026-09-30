@@ -13,6 +13,8 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Spinner
+import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -27,6 +29,8 @@ class MainActivity : AppCompatActivity() {
     private val line = Color.rgb(225, 219, 207)
 
     private lateinit var searchInput: EditText
+    private lateinit var sizeSpinner: Spinner
+    private lateinit var colorSpinner: Spinner
 
     private val prefs by lazy {
         getSharedPreferences("huntly_v", MODE_PRIVATE)
@@ -61,7 +65,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         root.addView(header())
-        root.addView(searchBox(), marginParams(top = 24, bottom = 14))
+        root.addView(searchBox(), marginParams(top = 24, bottom = 10))
+        root.addView(filterRow(), marginParams(bottom = 14))
         root.addView(showItemButton(), marginParams(bottom = 28))
 
         val inspirations = savedInspirations()
@@ -163,6 +168,53 @@ class MainActivity : AppCompatActivity() {
         return searchInput
     }
 
+    private fun filterRow(): View {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        sizeSpinner = filterSpinner(
+            listOf("Rozmiar", "XS", "S", "M", "L", "XL", "XXL", "34", "36", "38", "40", "42", "44")
+        )
+
+        colorSpinner = filterSpinner(
+            listOf("Kolor", "czarny", "biały", "beżowy", "brązowy", "szary", "granatowy", "niebieski", "zielony", "czerwony", "różowy")
+        )
+
+        row.addView(sizeSpinner, LinearLayout.LayoutParams(0, dp(46), 1f))
+        row.addView(colorSpinner, LinearLayout.LayoutParams(0, dp(46), 1f).apply {
+            setMargins(dp(8), 0, 0, 0)
+        })
+
+        return row
+    }
+
+    private fun filterSpinner(values: List<String>): Spinner {
+        val spinner = Spinner(this).apply {
+            background = rounded(warmWhite, 16f, line)
+            setPadding(dp(12), 0, dp(8), 0)
+        }
+
+        val adapter = object : ArrayAdapter<String>(
+            this,
+            android.R.layout.simple_spinner_item,
+            values
+        ) {
+            override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View {
+                val view = super.getView(position, convertView, parent) as TextView
+                view.textSize = 14f
+                view.setTextColor(if (position == 0) muted else darkGreen)
+                view.setPadding(dp(10), 0, dp(4), 0)
+                return view
+            }
+        }
+
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinner.adapter = adapter
+        return spinner
+    }
+
     private fun showItemButton(): View {
         return Button(this).apply {
             text = "＋  POKAŻ MI RZECZ"
@@ -179,6 +231,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun searchVinted() {
         val query = searchInput.text?.toString()?.trim().orEmpty()
+        val size = sizeSpinner.selectedItem?.toString().orEmpty()
+        val color = colorSpinner.selectedItem?.toString().orEmpty()
 
         if (query.isBlank()) {
             Toast.makeText(
@@ -190,11 +244,18 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        val filters = buildList {
+            if (size.isNotBlank() && size != "Rozmiar") add("rozmiar $size")
+            if (color.isNotBlank() && color != "Kolor") add("kolor $color")
+        }
+
+        val finalQuery = listOf(query, *filters.toTypedArray()).joinToString(" ")
+
         val searchUri = Uri.Builder()
             .scheme("https")
             .authority("www.vinted.pl")
             .path("catalog")
-            .appendQueryParameter("search_text", query)
+            .appendQueryParameter("search_text", finalQuery)
             .build()
 
         startActivity(Intent(Intent.ACTION_VIEW, searchUri))
