@@ -256,25 +256,26 @@ class MainActivity : AppCompatActivity() {
         val visual = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            background = rounded(Color.rgb(235, 231, 222), 18f)
-            setPadding(dp(10), dp(28), dp(10), dp(28))
+            background = rounded(Color.rgb(241, 237, 228), 18f)
+            setPadding(dp(18), dp(18), dp(18), dp(18))
+            minimumHeight = dp(190)
         }
 
         val camera = ImageView(this).apply {
             setImageResource(android.R.drawable.ic_menu_camera)
-            setColorFilter(Color.rgb(132, 126, 113))
+            setColorFilter(Color.rgb(155, 148, 134))
         }
 
         val visualText = TextView(this).apply {
-            text = "ZDJĘCIE OFERTY"
-            textSize = 11f
+            text = "TU BĘDZIE ZDJĘCIE RZECZY"
+            textSize = 12f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.rgb(132, 126, 113))
+            setTextColor(Color.rgb(155, 148, 134))
             gravity = Gravity.CENTER
-            setPadding(0, dp(8), 0, 0)
+            setPadding(0, dp(10), 0, 0)
         }
 
-        visual.addView(camera, LinearLayout.LayoutParams(dp(42), dp(42)))
+        visual.addView(camera, LinearLayout.LayoutParams(dp(48), dp(48)))
         visual.addView(visualText)
 
         val meta = TextView(this).apply {
