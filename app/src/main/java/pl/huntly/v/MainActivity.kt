@@ -22,6 +22,9 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.label.ImageLabeling
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 
 class MainActivity : AppCompatActivity() {
 
@@ -462,9 +465,109 @@ class MainActivity : AppCompatActivity() {
         card.addView(meta)
         card.addView(name)
         card.addView(hint)
+
+        if (isPhoto) {
+            val analysis = TextView(this).apply {
+                text = "Analizuję inspirację…"
+                textSize = 13f
+                setTextColor(muted)
+                setPadding(dp(4), 0, dp(4), dp(12))
+            }
+            card.addView(analysis)
+            analyzePhotoInspiration(url, analysis, searchInput)
+        }
+
         card.addView(actions)
 
         return card
+    }
+
+    private fun analyzePhotoInspiration(source: String, resultView: TextView, searchField: EditText) {
+        if (!source.startsWith("content://")) return
+
+        Thread {
+            try {
+                val bitmap = contentResolver.openInputStream(Uri.parse(source)).use {
+                    BitmapFactory.decodeStream(it)
+                } ?: return@Thread
+
+                val image = InputImage.fromBitmap(bitmap, 0)
+                val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
+                labeler.process(image)
+                    .addOnSuccessListener { labels ->
+                        val useful = labels
+                            .sortedByDescending { it.confidence }
+                            .map { it.text.lowercase() }
+                            .filter { it.length > 2 }
+                            .take(6)
+
+                        val color = dominantColorName(bitmap)
+                        val fashionTerms = useful.mapNotNull { label ->
+                            when {
+                                "trouser" in label || "pants" in label -> "spodnie"
+                                "suit" in label -> "garnitur komplet"
+                                "jacket" in label || "blazer" in label -> "marynarka"
+                                "shirt" in label -> "koszula"
+                                "dress" in label -> "sukienka"
+                                "coat" in label -> "płaszcz"
+                                "clothing" in label || "apparel" in label -> "ubranie"
+                                "fashion" in label -> "moda"
+                                else -> null
+                            }
+                        }.distinct()
+
+                        val query = (fashionTerms + listOfNotNull(color)).distinct().joinToString(" ")
+                        val shown = if (query.isBlank()) {
+                            "Zdjęcie zapisane. Na razie nie udało się rozpoznać konkretnego fasonu."
+                        } else {
+                            "Rozpoznano: $query"
+                        }
+
+                        runOnUiThread {
+                            resultView.text = shown
+                            if (query.isNotBlank()) {
+                                searchField.setText(query)
+                            }
+                        }
+                        labeler.close()
+                    }
+                    .addOnFailureListener {
+                        runOnUiThread {
+                            resultView.text = "Zdjęcie zapisane. Analiza nie była dostępna."
+                        }
+                        labeler.close()
+                    }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    resultView.text = "Zdjęcie zapisane. Analiza nie była dostępna."
+                }
+            }
+        }.start()
+    }
+
+    private fun dominantColorName(bitmap: android.graphics.Bitmap): String? {
+        val scaled = android.graphics.Bitmap.createScaledBitmap(bitmap, 1, 1, true)
+        val pixel = scaled.getPixel(0, 0)
+        scaled.recycle()
+        val r = Color.red(pixel)
+        val g = Color.green(pixel)
+        val b = Color.blue(pixel)
+        val max = maxOf(r, g, b)
+        val min = minOf(r, g, b)
+        val avg = (r + g + b) / 3
+
+        return when {
+            avg < 45 -> "czarny"
+            avg > 235 && max - min < 18 -> "biały"
+            max - min < 22 && avg < 105 -> "szary ciemny"
+            max - min < 22 -> "szary"
+            r > 145 && g > 110 && b < 100 && r - b > 55 -> "camel beż brąz"
+            r > g + 35 && r > b + 35 -> "czerwony"
+            g > r + 25 && g > b + 15 -> "zielony"
+            b > r + 25 && b > g + 10 -> "niebieski"
+            r > 170 && g > 120 && b > 80 -> "beżowy"
+            else -> null
+        }
     }
 
     private fun loadInspirationImage(source: String, imageView: ImageView) {
