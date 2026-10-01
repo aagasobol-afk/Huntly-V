@@ -495,7 +495,7 @@ class MainActivity : AppCompatActivity() {
         if (slug.isBlank()) return "Zapisana rzecz"
 
         val words = slug
-            .replace(Regex("^\d+-"), "")
+            .replace(Regex("""^\d+-"""), "")
             .replace("-", " ")
             .replace("_", " ")
             .trim()
