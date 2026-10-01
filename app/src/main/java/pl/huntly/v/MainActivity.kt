@@ -486,7 +486,7 @@ class MainActivity : AppCompatActivity() {
 
         return raw
             .replace("&amp;", "&")
-            .replace("&quot;", """)
+            .replace("&quot;", "\"")
             .replace("&#x2F;", "/")
     }
 
