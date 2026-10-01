@@ -20,6 +20,7 @@ import android.widget.Spinner
 import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
@@ -34,6 +35,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchInput: EditText
     private lateinit var sizeSpinner: Spinner
     private lateinit var colorSpinner: Spinner
+
+    private val pickImage = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            try {
+                contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {
+                // Some providers do not support persistable permissions.
+            }
+            saveInspiration(it.toString())
+            showSharedContent(Intent())
+        }
+    }
 
     private val prefs by lazy {
         getSharedPreferences("huntly_v", MODE_PRIVATE)
@@ -70,7 +86,8 @@ class MainActivity : AppCompatActivity() {
         root.addView(header())
         root.addView(searchBox(), marginParams(top = 24, bottom = 10))
         root.addView(filterRow(), marginParams(bottom = 14))
-        root.addView(showItemButton(), marginParams(bottom = 28))
+        root.addView(showItemButton(), marginParams(bottom = 10))
+        root.addView(addPhotoButton(), marginParams(bottom = 28))
 
         val inspirations = savedInspirations()
 
@@ -237,6 +254,20 @@ class MainActivity : AppCompatActivity() {
         return spinner
     }
 
+    private fun addPhotoButton(): View {
+        return Button(this).apply {
+            text = "＋  DODAJ ZDJĘCIE INSPIRACJI"
+            textSize = 13f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(darkGreen)
+            isAllCaps = false
+            background = rounded(warmWhite, 18f, line)
+            setOnClickListener {
+                pickImage.launch(arrayOf("image/*"))
+            }
+        }
+    }
+
     private fun showItemButton(): View {
         return Button(this).apply {
             text = "＋  POKAŻ MI RZECZ"
@@ -361,10 +392,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         visual.addView(image, LinearLayout.LayoutParams(-1, dp(250)))
-        loadOfferImage(url, image)
+        loadInspirationImage(url, image)
+
+        val isPhoto = url.startsWith("content://")
 
         val meta = TextView(this).apply {
-            text = "INSPIRACJA  " + String.format("%02d", index + 1) + "   •   VINTED"
+            text = "INSPIRACJA  " + String.format("%02d", index + 1) + "   •   " + if (isPhoto) "ZDJĘCIE" else "VINTED"
             textSize = 11f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(gold)
@@ -372,7 +405,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val name = TextView(this).apply {
-            text = prettyTitle(url)
+            text = if (isPhoto) "Zdjęcie inspiracji" else prettyTitle(url)
             textSize = 20f
             typeface = Typeface.create("sans-serif", Typeface.BOLD)
             setTextColor(darkGreen)
@@ -381,7 +414,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val hint = TextView(this).apply {
-            text = "Zapamiętane jako punkt odniesienia dla Twojego stylu"
+            text = if (isPhoto) "Pokaż Huntly, co Ci się podoba — później poszukamy czegoś podobnego" else "Zapamiętane jako punkt odniesienia dla Twojego stylu"
             textSize = 13f
             setTextColor(muted)
             setPadding(dp(4), 0, dp(4), dp(12))
@@ -416,6 +449,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        if (isPhoto) {
+            open.text = "OTWÓRZ ZDJĘCIE"
+        }
+
         actions.addView(open, LinearLayout.LayoutParams(0, dp(48), 1f))
         actions.addView(delete, LinearLayout.LayoutParams(dp(86), dp(48)).apply {
             setMargins(dp(8), 0, 0, 0)
@@ -430,10 +467,29 @@ class MainActivity : AppCompatActivity() {
         return card
     }
 
-    private fun loadOfferImage(pageUrl: String, imageView: ImageView) {
+    private fun loadInspirationImage(source: String, imageView: ImageView) {
+        if (source.startsWith("content://")) {
+            Thread {
+                try {
+                    val bitmap = contentResolver.openInputStream(Uri.parse(source)).use {
+                        BitmapFactory.decodeStream(it)
+                    }
+                    if (bitmap != null) {
+                        runOnUiThread {
+                            imageView.clearColorFilter()
+                            imageView.setImageBitmap(bitmap)
+                        }
+                    }
+                } catch (_: Exception) {
+                    // Keep the placeholder if the local image is unavailable.
+                }
+            }.start()
+            return
+        }
+
         Thread {
             try {
-                val connection = (URL(pageUrl).openConnection() as HttpURLConnection).apply {
+                val connection = (URL(source).openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
                     connectTimeout = 10000
                     readTimeout = 10000
