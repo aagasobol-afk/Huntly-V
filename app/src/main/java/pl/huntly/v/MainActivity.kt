@@ -182,7 +182,26 @@ class MainActivity : AppCompatActivity() {
         )
 
         colorSpinner = filterSpinner(
-            listOf("Kolor", "czarny", "biały", "beżowy", "brązowy", "szary", "granatowy", "niebieski", "zielony", "czerwony", "różowy")
+            listOf(
+                "Kolor",
+                "czarny",
+                "biały",
+                "szary",
+                "beż / cappuccino",
+                "camel",
+                "taupe / greige",
+                "brązowy",
+                "granatowy",
+                "niebieski",
+                "zielony",
+                "khaki / oliwkowy",
+                "czerwony",
+                "różowy",
+                "fioletowy",
+                "pomarańczowy",
+                "żółty",
+                "wielokolorowy"
+            )
         )
 
         row.addView(sizeSpinner, LinearLayout.LayoutParams(0, dp(46), 1f))
@@ -249,7 +268,17 @@ class MainActivity : AppCompatActivity() {
 
         val filters = buildList {
             if (size.isNotBlank() && size != "Rozmiar") add("rozmiar $size")
-            if (color.isNotBlank() && color != "Kolor") add("kolor $color")
+            if (color.isNotBlank() && color != "Kolor") {
+                val colorTerms = when (color) {
+                    "beż / cappuccino" -> "beżowy cappuccino nude"
+                    "camel" -> "camel karmelowy jasny brąz"
+                    "taupe / greige" -> "taupe greige szarobeżowy"
+                    "khaki / oliwkowy" -> "khaki oliwkowy olive"
+                    "wielokolorowy" -> "wielokolorowe"
+                    else -> color
+                }
+                add("kolor $colorTerms")
+            }
         }
 
         val finalQuery = listOf(query, *filters.toTypedArray()).joinToString(" ")
