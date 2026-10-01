@@ -516,18 +516,24 @@ class MainActivity : AppCompatActivity() {
                             }
                         }.distinct()
 
-                        val query = (fashionTerms + listOfNotNull(color)).distinct().joinToString(" ")
-                        val shown = if (query.isBlank()) {
-                            "Zdjęcie zapisane. Na razie nie udało się rozpoznać konkretnego fasonu."
+                        val baseQuery = (fashionTerms + listOfNotNull(color)).distinct().joinToString(" ")
+                        val shown = if (baseQuery.isBlank()) {
+                            "Zdjęcie zapisane. Dodaj cechy fasonu, a Huntly zbuduje lepsze wyszukiwanie."
                         } else {
-                            "Rozpoznano: $query"
+                            "Rozpoznano: $baseQuery"
                         }
 
                         runOnUiThread {
                             resultView.text = shown
-                            if (query.isNotBlank()) {
-                                searchField.setText(query)
+                            if (baseQuery.isNotBlank()) {
+                                searchField.setText(baseQuery)
                             }
+                            addFashionRefinementChips(
+                                resultView,
+                                searchField,
+                                baseQuery,
+                                color
+                            )
                         }
                         labeler.close()
                     }
@@ -543,6 +549,86 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }.start()
+    }
+
+    private fun addFashionRefinementChips(
+        resultView: TextView,
+        searchField: EditText,
+        baseQuery: String,
+        detectedColor: String?
+    ) {
+        val parent = resultView.parent as? LinearLayout ?: return
+
+        val title = TextView(this).apply {
+            text = "Dopasuj fason (1–3 kliknięcia)"
+            textSize = 12f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(darkGreen)
+            setPadding(dp(4), 0, dp(4), dp(8))
+        }
+
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        val options = listOf(
+            "szerokie nogawki",
+            "wysoki stan",
+            "luźny krój",
+            "prosta nogawka",
+            "garniturowe",
+            "w paski"
+        )
+
+        options.forEach { option ->
+            val chip = Button(this).apply {
+                text = option
+                textSize = 11f
+                isAllCaps = false
+                setTextColor(darkGreen)
+                background = rounded(warmWhite, 50f, line)
+                setPadding(dp(10), 0, dp(10), 0)
+                setOnClickListener {
+                    val current = searchField.text?.toString()?.trim().orEmpty()
+                    if (!current.split(" ").contains(option)) {
+                        searchField.setText(
+                            listOf(current, option)
+                                .filter { it.isNotBlank() }
+                                .joinToString(" ")
+                        )
+                    }
+                    chip.background = rounded(Color.rgb(232, 239, 231), 50f, darkGreen)
+                    chip.setTextColor(darkGreen)
+                    resultView.text = "Zapytanie dopasowane: " + searchField.text.toString()
+                }
+            }
+            row.addView(
+                chip,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    dp(38)
+                ).apply {
+                    setMargins(0, 0, dp(7), 0)
+                }
+            )
+        }
+
+        val scroll = ScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(row)
+        }
+
+        val index = parent.indexOfChild(resultView)
+        parent.addView(title, index + 1)
+        parent.addView(scroll, index + 2)
+
+        // Keep this conservative: the generic ML model can detect clothing
+        // and broad categories, but shape attributes are offered as explicit
+        // visual refinements instead of being guessed.
+        if (!detectedColor.isNullOrBlank() && baseQuery.isBlank()) {
+            searchField.setText(detectedColor)
+        }
     }
 
     private fun dominantColorName(bitmap: android.graphics.Bitmap): String? {
