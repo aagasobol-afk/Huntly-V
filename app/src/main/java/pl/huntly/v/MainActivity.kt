@@ -1,10 +1,13 @@
 package pl.huntly.v
 
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
+import java.net.HttpURLConnection
+import java.net.URL
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -322,22 +325,14 @@ class MainActivity : AppCompatActivity() {
             minimumHeight = dp(190)
         }
 
-        val camera = ImageView(this).apply {
+        val image = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
             setImageResource(android.R.drawable.ic_menu_camera)
             setColorFilter(Color.rgb(155, 148, 134))
         }
 
-        val visualText = TextView(this).apply {
-            text = "TU BĘDZIE ZDJĘCIE RZECZY"
-            textSize = 12f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.rgb(155, 148, 134))
-            gravity = Gravity.CENTER
-            setPadding(0, dp(10), 0, 0)
-        }
-
-        visual.addView(camera, LinearLayout.LayoutParams(dp(48), dp(48)))
-        visual.addView(visualText)
+        visual.addView(image, LinearLayout.LayoutParams(-1, dp(250)))
+        loadOfferImage(url, image)
 
         val meta = TextView(this).apply {
             text = "INSPIRACJA  " + String.format("%02d", index + 1) + "   •   VINTED"
@@ -404,6 +399,66 @@ class MainActivity : AppCompatActivity() {
         card.addView(actions)
 
         return card
+    }
+
+    private fun loadOfferImage(pageUrl: String, imageView: ImageView) {
+        Thread {
+            try {
+                val connection = (URL(pageUrl).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                    instanceFollowRedirects = true
+                    setRequestProperty(
+                        "User-Agent",
+                        "Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36"
+                    )
+                    setRequestProperty("Accept-Language", "pl-PL,pl;q=0.9,en;q=0.8")
+                }
+
+                val html = connection.inputStream.bufferedReader().use { it.readText() }
+                connection.disconnect()
+
+                val imageUrl = extractOgImage(html) ?: return@Thread
+
+                val imageConnection = (URL(imageUrl).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                    instanceFollowRedirects = true
+                    setRequestProperty(
+                        "User-Agent",
+                        "Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36"
+                    )
+                }
+
+                val bitmap = imageConnection.inputStream.use { BitmapFactory.decodeStream(it) }
+                imageConnection.disconnect()
+
+                if (bitmap != null) {
+                    runOnUiThread {
+                        imageView.clearColorFilter()
+                        imageView.setImageBitmap(bitmap)
+                    }
+                }
+            } catch (_: Exception) {
+                // Keep the placeholder if Vinted blocks the request.
+            }
+        }.start()
+    }
+
+    private fun extractOgImage(html: String): String? {
+        val patterns = listOf(
+            Regex("""<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["'][^>]*>""", RegexOption.IGNORE_CASE),
+            Regex("""<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["'][^>]*>""", RegexOption.IGNORE_CASE)
+        )
+
+        val raw = patterns.firstNotNullOfOrNull { it.find(html)?.groupValues?.getOrNull(1) }
+            ?: return null
+
+        return raw
+            .replace("&amp;", "&")
+            .replace("&quot;", """)
+            .replace("&#x2F;", "/")
     }
 
     private fun prettyTitle(url: String): String {
