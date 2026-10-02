@@ -589,20 +589,22 @@ class MainActivity : AppCompatActivity() {
                 setTextColor(darkGreen)
                 background = rounded(warmWhite, 50f, line)
                 setPadding(dp(10), 0, dp(10), 0)
-                setOnClickListener {
-                    val current = searchField.text?.toString()?.trim().orEmpty()
-                    if (!current.split(" ").contains(option)) {
-                        searchField.setText(
-                            listOf(current, option)
-                                .filter { it.isNotBlank() }
-                                .joinToString(" ")
-                        )
-                    }
-                    chip.background = rounded(Color.rgb(232, 239, 231), 50f, darkGreen)
-                    chip.setTextColor(darkGreen)
-                    resultView.text = "Zapytanie dopasowane: " + searchField.text.toString()
-                }
             }
+
+            chip.setOnClickListener {
+                val current = searchField.text?.toString()?.trim().orEmpty()
+                if (!current.split(" ").contains(option)) {
+                    searchField.setText(
+                        listOf(current, option)
+                            .filter { it.isNotBlank() }
+                            .joinToString(" ")
+                    )
+                }
+                chip.background = rounded(Color.rgb(232, 239, 231), 50f, darkGreen)
+                chip.setTextColor(darkGreen)
+                resultView.text = "Zapytanie dopasowane: " + searchField.text.toString()
+            }
+
             row.addView(
                 chip,
                 LinearLayout.LayoutParams(
