@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchInput: EditText
     private lateinit var sizeSpinner: Spinner
     private lateinit var colorSpinner: Spinner
+    private lateinit var secondColorSpinner: Spinner
     private lateinit var shoeSizeSpinner: Spinner
 
     private val pickImage = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -193,7 +194,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun filterRow(): View {
-        val row = LinearLayout(this).apply {
+        val content = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
@@ -201,39 +202,36 @@ class MainActivity : AppCompatActivity() {
         sizeSpinner = filterSpinner(
             listOf("Rozmiar", "XS", "S", "M", "L", "XL", "XXL", "34", "36", "38", "40", "42", "44")
         )
-
-        shoeSizeSpinner = filterSpinner(listOf("Obuwie", "35", "35,5", "36", "36,5", "37", "37,5", "38", "38,5", "39", "39,5", "40", "40,5", "41", "41,5", "42", "42,5", "43"))
-
-        colorSpinner = filterSpinner(
-            listOf(
-                "Kolor",
-                "czarny",
-                "biały",
-                "szary",
-                "beż / cappuccino",
-                "camel",
-                "taupe / greige",
-                "brązowy",
-                "granatowy",
-                "niebieski",
-                "zielony",
-                "khaki / oliwkowy",
-                "czerwony",
-                "różowy",
-                "fioletowy",
-                "pomarańczowy",
-                "żółty",
-                "wielokolorowy"
-            )
+        shoeSizeSpinner = filterSpinner(
+            listOf("Obuwie", "35", "35,5", "36", "36,5", "37", "37,5", "38", "38,5", "39", "39,5", "40", "40,5", "41", "41,5", "42", "42,5", "43")
         )
 
-        row.addView(sizeSpinner, LinearLayout.LayoutParams(0, dp(46), 1f))
-        row.addView(shoeSizeSpinner, LinearLayout.LayoutParams(0, dp(46), 1f).apply { setMargins(dp(8), 0, 0, 0) })
-        row.addView(colorSpinner, LinearLayout.LayoutParams(0, dp(46), 1f).apply {
+        val colors = listOf(
+            "Kolor 1", "czarny", "biały", "szary", "beż / cappuccino", "camel",
+            "taupe / greige", "brązowy", "granatowy", "niebieski", "zielony",
+            "khaki / oliwkowy", "czerwony", "różowy", "fioletowy",
+            "pomarańczowy", "żółty", "wielokolorowy"
+        )
+        colorSpinner = filterSpinner(colors)
+        secondColorSpinner = filterSpinner(colors.mapIndexed { i, value ->
+            if (i == 0) "Kolor 2" else value
+        })
+
+        content.addView(sizeSpinner, LinearLayout.LayoutParams(dp(118), dp(46)))
+        content.addView(shoeSizeSpinner, LinearLayout.LayoutParams(dp(118), dp(46)).apply {
+            setMargins(dp(8), 0, 0, 0)
+        })
+        content.addView(colorSpinner, LinearLayout.LayoutParams(dp(118), dp(46)).apply {
+            setMargins(dp(8), 0, 0, 0)
+        })
+        content.addView(secondColorSpinner, LinearLayout.LayoutParams(dp(118), dp(46)).apply {
             setMargins(dp(8), 0, 0, 0)
         })
 
-        return row
+        return HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(content)
+        }
     }
 
     private fun filterSpinner(values: List<String>): Spinner {
@@ -292,7 +290,8 @@ class MainActivity : AppCompatActivity() {
     private fun searchVinted() {
         val query = searchInput.text?.toString()?.trim().orEmpty()
         val size = sizeSpinner.selectedItem?.toString().orEmpty()
-        val color = colorSpinner.selectedItem?.toString().orEmpty()
+        val color1 = colorSpinner.selectedItem?.toString().orEmpty()
+        val color2 = secondColorSpinner.selectedItem?.toString().orEmpty()
         val shoeSize = shoeSizeSpinner.selectedItem?.toString().orEmpty()
 
         if (query.isBlank()) {
@@ -308,17 +307,19 @@ class MainActivity : AppCompatActivity() {
         val filters = buildList {
             if (size.isNotBlank() && size != "Rozmiar") add("rozmiar $size")
             if (shoeSize.isNotBlank() && shoeSize != "Obuwie") add("buty rozmiar $shoeSize")
-            if (color.isNotBlank() && color != "Kolor") {
-                val colorTerms = when (color) {
-                    "beż / cappuccino" -> "beżowy cappuccino nude"
-                    "camel" -> "camel karmelowy jasny brąz"
-                    "taupe / greige" -> "taupe greige szarobeżowy"
-                    "khaki / oliwkowy" -> "khaki oliwkowy olive"
-                    "wielokolorowy" -> "wielokolorowe"
-                    else -> color
+            listOf(color1, color2)
+                .filter { it.isNotBlank() && it != "Kolor 1" && it != "Kolor 2" }
+                .forEachIndexed { index, color ->
+                    val colorTerms = when (color) {
+                        "beż / cappuccino" -> "beżowy cappuccino nude"
+                        "camel" -> "camel karmelowy jasny brąz"
+                        "taupe / greige" -> "taupe greige szarobeżowy"
+                        "khaki / oliwkowy" -> "khaki oliwkowy olive"
+                        "wielokolorowy" -> "wielokolorowe"
+                        else -> color
+                    }
+                    add("kolor " + (index + 1) + " " + colorTerms)
                 }
-                add("kolor $colorTerms")
-            }
         }
 
         val finalQuery = listOf(query, *filters.toTypedArray()).joinToString(" ")
