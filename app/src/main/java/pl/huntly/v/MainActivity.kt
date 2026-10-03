@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchInput: EditText
     private lateinit var sizeSpinner: Spinner
     private lateinit var colorSpinner: Spinner
+    private lateinit var shoeSizeSpinner: Spinner
 
     private val pickImage = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
