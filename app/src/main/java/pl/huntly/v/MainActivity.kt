@@ -202,6 +202,8 @@ class MainActivity : AppCompatActivity() {
             listOf("Rozmiar", "XS", "S", "M", "L", "XL", "XXL", "34", "36", "38", "40", "42", "44")
         )
 
+        shoeSizeSpinner = filterSpinner(listOf("Obuwie", "35", "35,5", "36", "36,5", "37", "37,5", "38", "38,5", "39", "39,5", "40", "40,5", "41", "41,5", "42", "42,5", "43"))
+
         colorSpinner = filterSpinner(
             listOf(
                 "Kolor",
@@ -226,6 +228,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         row.addView(sizeSpinner, LinearLayout.LayoutParams(0, dp(46), 1f))
+        row.addView(shoeSizeSpinner, LinearLayout.LayoutParams(0, dp(46), 1f).apply { setMargins(dp(8), 0, 0, 0) })
         row.addView(colorSpinner, LinearLayout.LayoutParams(0, dp(46), 1f).apply {
             setMargins(dp(8), 0, 0, 0)
         })
@@ -290,6 +293,7 @@ class MainActivity : AppCompatActivity() {
         val query = searchInput.text?.toString()?.trim().orEmpty()
         val size = sizeSpinner.selectedItem?.toString().orEmpty()
         val color = colorSpinner.selectedItem?.toString().orEmpty()
+        val shoeSize = shoeSizeSpinner.selectedItem?.toString().orEmpty()
 
         if (query.isBlank()) {
             Toast.makeText(
@@ -303,6 +307,7 @@ class MainActivity : AppCompatActivity() {
 
         val filters = buildList {
             if (size.isNotBlank() && size != "Rozmiar") add("rozmiar $size")
+            if (shoeSize.isNotBlank() && shoeSize != "Obuwie") add("buty rozmiar $shoeSize")
             if (color.isNotBlank() && color != "Kolor") {
                 val colorTerms = when (color) {
                     "beż / cappuccino" -> "beżowy cappuccino nude"
