@@ -158,6 +158,11 @@ class MainActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_HORIZONTAL
         }
 
+        val logo = ImageView(this).apply {
+            setImageResource(R.drawable.huntly_logo)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+        }
+
         val title = TextView(this).apply {
             text = "Huntly V"
             textSize = 38f
@@ -174,6 +179,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, dp(5), 0, 0)
         }
 
+        box.addView(logo, LinearLayout.LayoutParams(dp(118), dp(118)))
         box.addView(title)
         box.addView(subtitle)
         return box
