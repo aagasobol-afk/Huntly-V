@@ -316,7 +316,7 @@ class MainActivity : AppCompatActivity() {
             if (shoeSize.isNotBlank() && shoeSize != "Obuwie") add("buty rozmiar $shoeSize")
             listOf(color1, color2)
                 .filter { it.isNotBlank() && it != "Kolor 1" && it != "Kolor 2" }
-                .forEachIndexed { index, color ->
+                .forEach { color ->
                     val colorTerms = when (color) {
                         "beż / cappuccino" -> "beżowy cappuccino nude"
                         "camel" -> "camel karmelowy jasny brąz"
@@ -325,7 +325,7 @@ class MainActivity : AppCompatActivity() {
                         "wielokolorowy" -> "wielokolorowe"
                         else -> color
                     }
-                    add("kolor " + (index + 1) + " " + colorTerms)
+                    add(colorTerms)
                 }
         }
 
